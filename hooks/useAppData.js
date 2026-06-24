@@ -4,6 +4,14 @@ import { PRODUITS } from "../constants/produits";
 import { CBC_CBD } from "../constants/cbcData";
 import { defaultParams } from "../constants/defaultParams";
 
+/** Loggue et signale toute erreur d'écriture de façon visible, plutôt que de
+ * laisser une promesse rejetée non gérée planter l'app avec un message illisible. */
+function reportWriteError(context, err) {
+  console.error(`Erreur Supabase (${context}) :`, err);
+  const message = err?.message || err?.error_description || JSON.stringify(err);
+  alert(`Erreur lors de l'enregistrement (${context}) :\n${message}`);
+}
+
 /**
  * Hook central : charge toutes les données depuis Supabase au démarrage,
  * et expose les setters qui écrivent directement en base (pas de cache local
@@ -76,64 +84,108 @@ export function useAppData() {
       if (idx >= 0) { const copy = [...prev]; copy[idx] = nouvelleVente; return copy; }
       return [...prev, nouvelleVente];
     });
-    await data.upsertVente(nouvelleVente);
+    try {
+      await data.upsertVente(nouvelleVente);
+    } catch (err) {
+      reportWriteError("vente", err);
+    }
   }, []);
 
   const deleteVente = useCallback(async (id) => {
     setVentesState(prev => prev.map(v => v.id === id ? { ...v, deleted: true } : v));
     const vente = ventes.find(v => v.id === id);
-    if (vente) await data.upsertVente({ ...vente, deleted: true });
+    if (!vente) return;
+    try {
+      await data.upsertVente({ ...vente, deleted: true });
+    } catch (err) {
+      reportWriteError("suppression de vente", err);
+    }
   }, [ventes]);
 
   const rembourserVente = useCallback(async (id) => {
     setVentesState(prev => prev.map(v => v.id === id ? { ...v, rembourse: true } : v));
     const vente = ventes.find(v => v.id === id);
-    if (vente) await data.upsertVente({ ...vente, rembourse: true });
+    if (!vente) return;
+    try {
+      await data.upsertVente({ ...vente, rembourse: true });
+    } catch (err) {
+      reportWriteError("remboursement", err);
+    }
   }, [ventes]);
 
   // ── Journal caisse ──
   const addJournalEvent = useCallback(async (event) => {
     const nouvelEvent = { ...event, id: Date.now() };
     setJournalCaisseState(prev => [...prev, nouvelEvent]);
-    await data.insertJournalEvent(nouvelEvent);
+    try {
+      await data.insertJournalEvent(nouvelEvent);
+    } catch (err) {
+      reportWriteError("ouverture/fermeture de caisse", err);
+    }
   }, []);
 
   // ── Courses ──
   const addCourse = useCallback(async (course) => {
     const nouvelle = { ...course, id: course.id || Date.now() };
     setCoursesState(prev => [...prev, nouvelle]);
-    await data.upsertCourse(nouvelle);
+    try {
+      await data.upsertCourse(nouvelle);
+    } catch (err) {
+      reportWriteError("ajout de course", err);
+    }
   }, []);
 
   const updateCourse = useCallback(async (course) => {
     setCoursesState(prev => prev.map(c => c.id === course.id ? course : c));
-    await data.upsertCourse(course);
+    try {
+      await data.upsertCourse(course);
+    } catch (err) {
+      reportWriteError("modification de course", err);
+    }
   }, []);
 
   const removeCourse = useCallback(async (id) => {
     setCoursesState(prev => prev.filter(c => c.id !== id));
-    await data.deleteCourse(id);
+    try {
+      await data.deleteCourse(id);
+    } catch (err) {
+      reportWriteError("suppression de course", err);
+    }
   }, []);
 
   // ── Achats ingrédients ──
   const addAchatsIngredients = useCallback(async (achatsArray) => {
     setAchatsState(prev => [...prev, ...achatsArray]);
-    await data.insertAchatsIngredients(achatsArray);
+    try {
+      await data.insertAchatsIngredients(achatsArray);
+    } catch (err) {
+      reportWriteError("achats ingrédients", err);
+    }
   }, []);
 
   // ── Achats CBD ──
   const addAchatCBD = useCallback(async (achat) => {
     const nouvel = { ...achat, id: achat.id || Date.now() + Math.random() };
     setAchatsCBCState(prev => [...prev, nouvel]);
-    await data.insertAchatCBD(nouvel);
+    try {
+      await data.insertAchatCBD(nouvel);
+    } catch (err) {
+      reportWriteError("achat CBD", err);
+    }
   }, []);
 
   // ── Nbres planifiés ──
+  // Note : l'écriture Supabase est déclenchée hors du setState (pas dans le callback
+  // de mise à jour) pour éviter de mélanger effet de bord asynchrone et calcul d'état.
   const setNbres = useCallback((updater) => {
     setNbresState(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
       Object.entries(next).forEach(([produitId, quantite]) => {
-        if (prev[produitId] !== quantite) data.upsertNbrePlanifie(produitId, quantite);
+        if (prev[produitId] !== quantite) {
+          data.upsertNbrePlanifie(produitId, quantite).catch(err =>
+            reportWriteError("quantité planifiée", err)
+          );
+        }
       });
       return next;
     });
@@ -143,7 +195,7 @@ export function useAppData() {
   const setProduits = useCallback((updater) => {
     setProduitsState(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      data.upsertProduitsBatch(next);
+      data.upsertProduitsBatch(next).catch(err => reportWriteError("recette produit", err));
       return next;
     });
   }, []);
@@ -152,7 +204,7 @@ export function useAppData() {
   const setParams = useCallback((updater) => {
     setParamsState(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      data.saveParams(next);
+      data.saveParams(next).catch(err => reportWriteError("paramètres", err));
       return next;
     });
   }, []);

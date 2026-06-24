@@ -2,6 +2,7 @@
   "name": "cateh-pro",
   "version": "1.0.0",
   "private": true,
+  "homepage": "https://shammoum9-alt.github.io/livcoffee",
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "react": "^18.3.1",
@@ -30,5 +31,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }

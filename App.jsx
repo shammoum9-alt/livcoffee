@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import { useAuth } from "./hooks/useAuth";
 import { useAppData } from "./hooks/useAppData";
 
+import Login from "./components/Login";
 import SyncStatus from "./components/SyncStatus";
 import Caisse from "./components/Caisse";
 import Dashboard from "./components/Dashboard";
@@ -25,6 +27,26 @@ const TABS = [
 ];
 
 export default function App() {
+  const { checking, isAuthenticated, signOut } = useAuth();
+
+  // Tant qu'on ne sait pas encore si quelqu'un est connecté, on n'affiche rien
+  // de définitif (évite un flash de l'écran de login si une session existe déjà).
+  if (checking) {
+    return <div style={{ padding: "2rem", color: "var(--color-text-secondary)" }}>Vérification de la session…</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return <AppAuthenticated onSignOut={signOut} />;
+}
+
+/**
+ * Séparé de App() : useAppData() ne se déclenche qu'une fois l'authentification confirmée,
+ * pour ne jamais interroger Supabase avant d'avoir une session valide.
+ */
+function AppAuthenticated({ onSignOut }) {
   const [tab, setTab] = useState("caisse");
 
   const {
@@ -49,7 +71,7 @@ export default function App() {
       <div style={{ padding: "2rem", color: "#dc3545" }}>
         <h2>Erreur de connexion à Supabase</h2>
         <pre>{error.message}</pre>
-        <p>Vérifie l'URL et la clé dans <code>src/services/supabase.js</code>, et que les tables existent bien.</p>
+        <p>Vérifie l'URL et la clé dans <code>.env</code>, et que les tables existent bien.</p>
       </div>
     );
   }
@@ -67,6 +89,12 @@ export default function App() {
           <span style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text-primary)" }}>☕ Cateh</span>
           <span style={{ fontSize: 13, color: "var(--color-text-secondary)", marginLeft: 4 }}>Café & CBD</span>
           <SyncStatus />
+          <button onClick={onSignOut} style={{
+            marginLeft: "auto", fontSize: 12, padding: "4px 10px", border: "0.5px solid var(--color-border-tertiary)",
+            borderRadius: "var(--border-radius-md)", background: "none", cursor: "pointer", color: "var(--color-text-secondary)",
+          }}>
+            Déconnexion
+          </button>
         </div>
         <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: "0" }}>
           {TABS.map(t => (

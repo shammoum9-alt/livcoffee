@@ -102,19 +102,23 @@ la table se peuple et devient la source de vérité.
   vue simplifiée (pas un bilan comptable officiel) — actif = trésorerie cumulée + immobilisations
   nettes, passif = dettes + résultat cumulé.
 
-## Sécurité — à revoir avant mise en production publique
+## Sécurité
 
-Les policies RLS actuelles (`supabase/schema.sql`) sont volontairement permissives :
+**Authentification** : compte unique partagé (email/mot de passe géré par Supabase Auth),
+suffisant pour l'usage actuel (un commerce, une petite équipe). Voir `hooks/useAuth.js` et
+`components/Login.jsx`. L'app ne charge aucune donnée (`useAppData`) avant qu'une session
+valide soit confirmée.
 
-```sql
-create policy "accès public lecture/écriture" on ventes for all using (true) with check (true);
-```
+**Policies RLS** : toutes les tables exigent `auth.uid() is not null` (voir
+`supabase/schema.sql`). Sans session valide, aucune lecture ni écriture n'est possible, même
+avec la clé publique en main.
 
-C'est acceptable pour un usage interne où la clé `anon` n'est pas largement diffusée, mais
-n'importe qui possédant cette clé peut lire/écrire toutes les tables. Avant toute exposition
-publique ou si plusieurs comptes utilisateurs distincts sont nécessaires, il faut :
-1. Activer l'authentification Supabase (email/password ou magic link)
-2. Réécrire les policies pour filtrer par utilisateur authentifié (`auth.uid()`)
+Si le besoin évolue vers plusieurs comptes distincts avec des permissions différentes
+(plusieurs commerces, rôles admin/employé...), il faudra :
+1. Créer un compte par utilisateur dans Supabase Auth
+2. Affiner les policies pour filtrer par `auth.uid()` précis plutôt que juste sa présence
+   (actuellement, n'importe quel compte authentifié voit tout — adapté à un seul compte
+   partagé, pas à une séparation de droits)
 
 ## Ce qui n'existe pas encore (transparence pour la suite)
 

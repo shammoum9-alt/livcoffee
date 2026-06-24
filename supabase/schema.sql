@@ -125,15 +125,15 @@ alter table produits enable row level security;
 alter table cbc_data enable row level security;
 alter table params enable row level security;
 
-create policy "accès public lecture/écriture" on ventes for all using (true) with check (true);
-create policy "accès public lecture/écriture" on journal_caisse for all using (true) with check (true);
-create policy "accès public lecture/écriture" on achats_ingredients for all using (true) with check (true);
-create policy "accès public lecture/écriture" on achats_cbd for all using (true) with check (true);
-create policy "accès public lecture/écriture" on courses for all using (true) with check (true);
-create policy "accès public lecture/écriture" on nbres_planifies for all using (true) with check (true);
-create policy "accès public lecture/écriture" on produits for all using (true) with check (true);
-create policy "accès public lecture/écriture" on cbc_data for all using (true) with check (true);
-create policy "accès public lecture/écriture" on params for all using (true) with check (true);
+create policy "utilisateurs authentifiés uniquement" on ventes for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "utilisateurs authentifiés uniquement" on journal_caisse for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "utilisateurs authentifiés uniquement" on achats_ingredients for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "utilisateurs authentifiés uniquement" on achats_cbd for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "utilisateurs authentifiés uniquement" on courses for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "utilisateurs authentifiés uniquement" on nbres_planifies for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "utilisateurs authentifiés uniquement" on produits for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "utilisateurs authentifiés uniquement" on cbc_data for all using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "utilisateurs authentifiés uniquement" on params for all using (auth.uid() is not null) with check (auth.uid() is not null);
 
 -- Index pour accélérer les filtres par date (fréquents dans l'app)
 create index idx_ventes_date on ventes(date);

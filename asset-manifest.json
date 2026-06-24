@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/livcoffee/static/css/main.6e2e335f.css",
+    "main.js": "/livcoffee/static/js/main.0286b0dd.js",
+    "index.html": "/livcoffee/index.html",
+    "main.6e2e335f.css.map": "/livcoffee/static/css/main.6e2e335f.css.map",
+    "main.0286b0dd.js.map": "/livcoffee/static/js/main.0286b0dd.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.6e2e335f.css",
+    "static/js/main.0286b0dd.js"
+  ]
+}

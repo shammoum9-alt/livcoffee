@@ -15,14 +15,7 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const result = await supabase.auth.signInWithPassword({ email, password });
-    console.log("Résultat signInWithPassword :", result);
-    const { error, data } = result;
-    console.log("Session retournée :", data?.session ? "PRÉSENTE" : "ABSENTE");
-    if (data?.session) {
-      const check = await supabase.auth.getSession();
-      console.log("Vérification immédiate getSession() :", check.data?.session ? "OK" : "PERDUE");
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       setError(

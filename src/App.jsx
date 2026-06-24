@@ -53,7 +53,7 @@ function AppAuthenticated({ onSignOut }) {
     loaded, error,
     ventes, addVente, deleteVente, rembourserVente,
     produits, setProduits,
-    cbcData,
+    cbcData, setCbcData,
     params, setParams,
     courses, addCourse, updateCourse, removeCourse,
     journalCaisse, addJournalEvent,
@@ -132,7 +132,7 @@ function AppAuthenticated({ onSignOut }) {
             produits={produits} nbres={nbres} setNbres={setNbres}
             achats={achats} addAchatsIngredients={addAchatsIngredients}
             addCourse={addCourse} ventes={ventes}
-            cbcData={cbcData} achatsCBC={achatsCBC} addAchatCBD={addAchatCBD}
+            cbcData={cbcData} setCbcData={setCbcData} achatsCBC={achatsCBC} addAchatCBD={addAchatCBD}
           />
         )}
         {tab === "compta" && (

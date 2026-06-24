@@ -11,7 +11,7 @@ import CBC from "./CBC";
  */
 export default function StockAchats({
   produits, nbres, setNbres, achats, addAchatsIngredients, addCourse, ventes,
-  cbcData, achatsCBC, addAchatCBD,
+  cbcData, setCbcData, achatsCBC, addAchatCBD,
 }) {
   const [sousOnglet, setSousOnglet] = useState("alimentaire");
 
@@ -50,6 +50,7 @@ export default function StockAchats({
       {sousOnglet === "cbd" && (
         <CBC
           cbcData={cbcData}
+          setCbcData={setCbcData}
           achatsCBC={achatsCBC}
           addAchatCBD={addAchatCBD}
           ventes={ventes}

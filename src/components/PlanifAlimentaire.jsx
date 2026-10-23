@@ -22,11 +22,18 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
       venduAujourd[it.produit] = (venduAujourd[it.produit] || 0) + it.qte;
     }));
 
-  const totalProduits = Object.values(nbres).reduce((s, v) => s + v, 0);
+  // Besoin = ce qui reste à vendre aujourd'hui (souhaité − déjà vendu).
+  // Le stock étant déduit des ventes (pas de la fabrication), les ingrédients des produits
+  // fabriqués mais pas encore vendus sont encore « dans le stock » : ne compter que le restant évite le double comptage.
+  const restantParProduit = {};
+  produits.forEach(p => {
+    restantParProduit[p.id] = Math.max(0, (nbres[p.id] || 0) - (venduAujourd[p.id] || 0));
+  });
+  const totalProduits = Object.values(restantParProduit).reduce((s, v) => s + v, 0);
 
   const coursesMap = {};
   produits.forEach(p => {
-    const n = nbres[p.id] || 0;
+    const n = restantParProduit[p.id];
     if (n <= 0) return;
     const factor = p.nbre_par_fournee > 0 ? n / p.nbre_par_fournee : n;
     p.ingredients.forEach(ing => {
@@ -45,8 +52,6 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
   if (!coursesMap["Barquette"]) coursesMap["Barquette"] = { qte: 0, unite: "unit", pu: 0.07, pu_max: 0.10 };
   coursesMap["Barquette"].qte += emb;
 
-  const totalCoursesTh = Object.values(coursesMap).reduce((s, v) => s + v.qte * v.pu, 0);
-
   const getLastPrix = (nom) => {
     const a = (achats || []).filter(x => x.ingredient === nom).sort((a, b) => b.id - a.id)[0];
     return a ? a.prix_unitaire : null;
@@ -63,6 +68,10 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
   // Consommation réelle d'un ingrédient = somme, sur tous les produits vendus, de (qté vendue / pièces par fournée) × qté ingrédient par fournée
   const getConsommationReelle = (nomIngredient) => {
     let total = 0;
+    // Emballages : 1 serviette + 1 barquette pour 8 produits vendus (même règle que le besoin)
+    if (nomIngredient === "Serviette" || nomIngredient === "Barquette") {
+      return Object.values(quantitesVenduesParProduit).reduce((s, q) => s + q, 0) / 8;
+    }
     produits.forEach(p => {
       const qteVendue = quantitesVenduesParProduit[p.id] || 0;
       if (qteVendue <= 0) return;
@@ -80,6 +89,14 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
     const consomme = getConsommationReelle(nom);
     return acheteCumule - consomme;
   };
+
+  // Calculé une seule fois par ingrédient : réutilisé par le tableau, le pré-remplissage, la validation et le budget
+  const lignes = {};
+  Object.entries(coursesMap).forEach(([nom, v]) => {
+    const stockDispo = getStockAchete(nom);
+    lignes[nom] = { ...v, stockDispo, aAcheter: Math.max(0, v.qte - Math.max(0, stockDispo)) };
+  });
+  const budgetEstime = Object.values(lignes).reduce((s, l) => s + l.aAcheter * l.pu, 0);
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -103,7 +120,7 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
     if (!coches.length) return;
     const getQteReelle = (nom, v) => {
       const saisie = parseFloat(v.qte_reelle);
-      return !isNaN(saisie) ? saisie : (coursesMap[nom]?.qte || 0);
+      return !isNaN(saisie) ? saisie : (lignes[nom]?.aAcheter || 0);
     };
     const nouveauxAchats = coches.map(([nom, v]) => ({
       id: Date.now() + Math.random(),
@@ -176,6 +193,7 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
           <div>
             <div style={{ fontSize: 14, fontWeight: 500 }}>🛒 Courses du jour</div>
             <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>Cochez et saisissez le prix réel payé par unité</div>
+            <div style={{ fontSize: 12, marginTop: 4 }}>Budget estimé (prix réf., stock déduit) : <strong>{fmtE(budgetEstime)}</strong></div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleUpload} style={{ display: "none" }} />
@@ -203,7 +221,7 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
               <tr style={{ borderBottom: "1px solid var(--color-border-tertiary)", background: "var(--color-background-secondary)" }}>
                 <th style={{ padding: "7px 8px", width: 32 }}></th>
                 <th style={{ textAlign: "left", padding: "7px 8px", fontWeight: 500 }}>Ingrédient</th>
-                <th style={{ textAlign: "right", padding: "7px 8px", fontWeight: 400, color: "var(--color-text-secondary)", fontSize: 11 }}>Besoin</th>
+                <th style={{ textAlign: "right", padding: "7px 8px", fontWeight: 400, color: "var(--color-text-secondary)", fontSize: 11 }} title="Quantités souhaitées − déjà vendu aujourd'hui">Besoin restant</th>
                 <th style={{ textAlign: "right", padding: "7px 8px", fontWeight: 400, color: "#2e7d32", fontSize: 11 }}>Stock dispo</th>
                 <th style={{ textAlign: "right", padding: "7px 8px", fontWeight: 500, fontSize: 11 }}>À acheter</th>
                 <th style={{ textAlign: "right", padding: "7px 8px", fontWeight: 400, color: "var(--color-text-secondary)", fontSize: 11 }}>Réf.</th>
@@ -214,7 +232,7 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
               </tr>
             </thead>
             <tbody>
-              {Object.entries(coursesMap).sort((a, b) => a[0].localeCompare(b[0])).map(([nom, v]) => {
+              {Object.entries(lignes).sort((a, b) => a[0].localeCompare(b[0])).map(([nom, v]) => {
                 const sess = coursesSession[nom] || { checked: false, prix_reel: "", unite: v.unite, pu_ref: v.pu, pu_max: v.pu_max };
                 const prixReel = parseFloat(sess.prix_reel) || 0;
                 const lastPrix = getLastPrix(nom);
@@ -232,7 +250,7 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
                         onChange={e => setCoursesSession(prev => {
                           const checked = e.target.checked;
                           const current = prev[nom] || sess;
-                          // Au moment de cocher, on pré-remplit la quantité réelle avec le besoin théorique calculé,
+                          // Au moment de cocher, on pré-remplit la quantité réelle avec le « À acheter » (stock déduit),
                           // mais elle reste modifiable juste après (cas : acheter plus/moins que prévu).
                           return {
                             ...prev,
@@ -240,7 +258,7 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
                               ...current,
                               checked,
                               qte_reelle: checked && (current.qte_reelle === undefined || current.qte_reelle === "")
-                                ? v.qte
+                                ? v.aAcheter
                                 : current.qte_reelle,
                             },
                           };
@@ -251,8 +269,7 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
                       <span style={{ marginRight: 5 }}>{perim}</span>{nom}
                     </td>
                     {(() => {
-                      const stockDispo = getStockAchete(nom);
-                      const aAcheter = Math.max(0, v.qte - Math.max(0, stockDispo));
+                      const { stockDispo, aAcheter } = v;
                       return (<>
                         <td style={{ textAlign: "right", padding: "7px 8px", color: "var(--color-text-secondary)", fontSize: 12 }}>
                           {fmt(v.qte, 2)} {v.unite}
@@ -277,7 +294,7 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
                     <td style={{ padding: "7px 4px", textAlign: "right" }}>
                       {sess.checked && (
                         <input type="number" step="0.01" min="0"
-                          value={sess.qte_reelle !== undefined ? sess.qte_reelle : v.qte}
+                          value={sess.qte_reelle !== undefined ? sess.qte_reelle : v.aAcheter}
                           onChange={e => setCoursesSession(prev => ({ ...prev, [nom]: { ...(prev[nom] || sess), qte_reelle: e.target.value } }))}
                           style={{
                             width: 64, padding: "4px 6px", textAlign: "right", fontSize: 13,
@@ -329,12 +346,9 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
       </div>
 
       {(() => {
-        const valeurStockDispo = Object.keys(coursesMap).reduce((s, nom) => {
-          const stock = getStockAchete(nom);
-          return s + (stock > 0 ? stock * (coursesMap[nom].pu || 0) : 0);
-        }, 0);
-        const aCompleter = Object.keys(coursesMap).filter(nom => Math.max(0, getStockAchete(nom)) < coursesMap[nom].qte).length;
-        if (Object.keys(coursesMap).length === 0) return null;
+        const valeurStockDispo = Object.values(lignes).reduce((s, l) => s + (l.stockDispo > 0 ? l.stockDispo * (l.pu || 0) : 0), 0);
+        const aCompleter = Object.values(lignes).filter(l => l.aAcheter > 0).length;
+        if (Object.keys(lignes).length === 0) return null;
         return (
           <div style={{ background: "rgba(46,125,50,0.06)", border: "0.5px solid rgba(46,125,50,0.3)", borderRadius: "var(--border-radius-md)", padding: "10px 14px", marginBottom: "1rem", display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13 }}>
             <span>📦 <strong>{fmtE(valeurStockDispo)}</strong> de stock disponible (valeur)</span>
@@ -343,34 +357,6 @@ export default function PlanifAlimentaire({ produits, nbres, setNbres, achats, a
           </div>
         );
       })()}
-
-      <div style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: "0.75rem" }}>
-        Liste théorique — {fmtE(totalCoursesTh)}
-      </div>
-      <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
-            {["Ingrédient", "Quantité", "Unité", "Prix réf.", "Total", "Périm."].map(h => (
-              <th key={h} style={{ textAlign: h === "Ingrédient" ? "left" : "right", padding: "4px 8px", color: "var(--color-text-secondary)", fontWeight: 400, fontSize: 12 }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(coursesMap).sort((a, b) => a[0].localeCompare(b[0])).map(([nom, v]) => (
-            <tr key={nom} style={{ borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
-              <td style={{ padding: "6px 8px" }}>{nom}</td>
-              <td style={{ textAlign: "right", padding: "6px 8px" }}>{fmt(v.qte, 3)}</td>
-              <td style={{ textAlign: "right", padding: "6px 8px", color: "var(--color-text-secondary)" }}>{v.unite}</td>
-              <td style={{ textAlign: "right", padding: "6px 8px", color: "var(--color-text-secondary)" }}>{v.pu}€</td>
-              <td style={{ textAlign: "right", padding: "6px 8px", fontWeight: 500 }}>{fmtE(v.qte * v.pu)}</td>
-              <td style={{ textAlign: "right", padding: "6px 8px", fontSize: 11 }}>
-                {nom.toLowerCase().includes("viande") || nom.toLowerCase().includes("poulet") || nom.toLowerCase().includes("framboise") ? "🔴" :
-                  nom.toLowerCase().includes("lait") || nom.toLowerCase().includes("oeuf") ? "🟡" : "🟢"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

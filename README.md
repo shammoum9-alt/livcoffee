@@ -120,11 +120,6 @@ Si le besoin évolue vers plusieurs comptes distincts avec des permissions diff�
    (actuellement, n'importe quel compte authentifié voit tout — adapté à un seul compte
    partagé, pas à une séparation de droits)
 
-## Ce qui n'existe pas encore (transparence pour la suite)
+## Roadmap
 
-- Aucun test (unitaire ou intégration) — la logique de `utils/calculs.js` est la priorité si
-  des tests sont ajoutés, car c'est la partie financière sensible.
-- Pas de TypeScript — tout est en JS, pas de typage statique.
-- Pas de CI/CD configuré.
-- Le `.env` versionné dans cet export contient de vraies clés pour permettre un démarrage
-  immédiat — à régénérer/exclure proprement une fois le repo Git en place (voir `.gitignore`).
+➡️ [ROADMAP.md](ROADMAP.md)

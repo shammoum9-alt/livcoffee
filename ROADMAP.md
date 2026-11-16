@@ -24,17 +24,19 @@ cause le choix de la caisse. Le module CBC/CBD reste gelé tel quel en attendant
 
 ## Calendrier
 
-> ⚠️ **À recaler** : calendrier fixé le 10/10/2026. Au 16/11, l'étape 1 de la V1 n'est pas
-> commencée.
+> ⚠️ **Recalé le 16/11/2026** : ouverture décalée à **début janvier 2027 au minimum**. Le
+> local n'est pas encore trouvé : la date d'ouverture reste à fixer une fois le local signé.
+> Les jalons sont donc exprimés par rapport à l'ouverture (J).
 
 | Jalon | Date |
 |---|---|
-| Compte SumUp d'essai + accès développeur (associés) | fin octobre |
+| **Local trouvé et bail signé** (associés) | à venir, conditionne la date J |
+| Compte SumUp d'essai + accès développeur (associés) | dès que possible (en retard) |
 | Vraie carte, recettes et allergènes saisis dans l'app (associés) | avant le gel |
-| **Gel de la V1** : tag `v1.0` sur `main`, création du projet Supabase staging | 20 novembre |
-| **Rodage** sur `main` : corrections de bugs uniquement, nouveautés dans `develop` | 23 novembre → 13 décembre |
-| **Ouverture** du café | à partir du 14 décembre |
-| Première fusion `develop` → `main` (hors correctifs) | ouverture + 2 semaines stables, mi-janvier 2027 |
+| **Gel de la V1** : tag `v1.0` sur `main`, création du projet Supabase staging | J − 3 semaines |
+| **Rodage** sur `main` : corrections de bugs uniquement, nouveautés dans `develop` | J − 3 semaines → J − 1 |
+| **Ouverture** du café (J) | début janvier 2027 au plus tôt |
+| Première fusion `develop` → `main` (hors correctifs) | J + 2 semaines stables |
 
 ---
 
